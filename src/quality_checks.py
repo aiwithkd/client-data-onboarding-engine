@@ -46,7 +46,7 @@ def _try_parse_date(val):
 
 # ── Individual checks ──────────────────────────────────────────────────────────
 
-def check_missing_required(df, sheet_name, required_cols):
+def check_missing_required(df, sheet_name, required_cols, max_per_col=50):
     findings = []
     for col in required_cols:
         if col not in df.columns:
@@ -54,9 +54,13 @@ def check_missing_required(df, sheet_name, required_cols):
                 "MISSING_COLUMN", f"Required column '{col}' not found in sheet"))
             continue
         null_rows = df[df[col].isna() | (df[col].astype(str).str.strip() == "")].index.tolist()
-        for row in null_rows:
+        total_nulls = len(null_rows)
+        for i, row in enumerate(null_rows[:max_per_col]):
             findings.append(_finding(sheet_name, col, int(row) + 2, SEVERITY_CRITICAL,
                 "NULL_REQUIRED", f"Required field is empty", df[col].iloc[row] if row < len(df) else None))
+        if total_nulls > max_per_col:
+            findings.append(_finding(sheet_name, col, None, SEVERITY_CRITICAL,
+                "NULL_REQUIRED", f"{total_nulls} empty values in this column — showing first {max_per_col}"))
     return findings
 
 
@@ -206,19 +210,25 @@ def check_negative_quantities(df, sheet_name):
     return findings
 
 
-def check_non_numeric_amounts(df, sheet_name):
+def check_non_numeric_amounts(df, sheet_name, max_per_col=20):
     findings = []
     numeric_hints = ["value", "amount", "price", "val", "cost", "qty", "quantity", "mkt"]
-    # Exclude columns that are likely dates or identifiers
     date_hints = ["date", "dt", "time", "id", "ref", "code", "name", "type", "currency", "ccy", "status"]
     for col in df.columns:
         if any(h in col for h in numeric_hints) and not any(d in col for d in date_hints):
             coerced = pd.to_numeric(df[col], errors="coerce")
             bad_rows = df[coerced.isna() & df[col].notna() & (df[col].astype(str).str.strip() != "")].index
+            count = 0
             for row in bad_rows:
+                if count >= max_per_col:
+                    findings.append(_finding(sheet_name, col, None, SEVERITY_CRITICAL,
+                        "NON_NUMERIC_VALUE",
+                        f"{len(bad_rows)} non-numeric values in this column — showing first {max_per_col}"))
+                    break
                 findings.append(_finding(sheet_name, col, int(row) + 2, SEVERITY_CRITICAL,
-                    "NON_NUMERIC_VALUE", f"Expected numeric value but got non-numeric data",
+                    "NON_NUMERIC_VALUE", "Expected numeric value but got non-numeric data",
                     df[col].iloc[row]))
+                count += 1
     return findings
 
 

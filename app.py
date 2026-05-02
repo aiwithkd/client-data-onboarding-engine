@@ -310,9 +310,14 @@ To get full validation, your file's sheet names should match one of:
 
     if findings:
         findings_df_u = findings_to_df(findings)
-        st.markdown("#### Issues Found")
+        DISPLAY_LIMIT = 500
+        total_findings = len(findings_df_u)
+        display_df = findings_df_u.head(DISPLAY_LIMIT)
+        st.markdown(f"#### Issues Found")
+        if total_findings > DISPLAY_LIMIT:
+            st.warning(f"**{total_findings:,} total issues found** — showing first {DISPLAY_LIMIT}. Download the full report below to see all.")
         st.dataframe(
-            findings_df_u.style.applymap(
+            display_df.style.applymap(
                 lambda v: "background-color:#fef2f2;color:#dc2626;font-weight:600" if v == "CRITICAL"
                      else "background-color:#fffbeb;color:#d97706;font-weight:600" if v == "WARNING"
                      else "background-color:#eff6ff;color:#2563eb;font-weight:600",
@@ -320,6 +325,17 @@ To get full validation, your file's sheet names should match one of:
             ),
             use_container_width=True, height=400
         )
+        # Export full report
+        output_u = BytesIO()
+        with pd.ExcelWriter(output_u, engine="openpyxl") as writer:
+            pd.DataFrame({"Metric": ["Total Records", "Total Issues", "Readiness Score", "Status"],
+                          "Value": [total_records, total_findings, f"{scorecard['score']}%", scorecard["status"]]
+                         }).to_excel(writer, sheet_name="Summary", index=False)
+            findings_df_u.to_excel(writer, sheet_name="All Issues", index=False)
+        output_u.seek(0)
+        st.download_button("⬇️ Download Full QC Report (.xlsx)", data=output_u,
+                           file_name=f"qc_report_upload_{pd.Timestamp.now().strftime('%Y%m%d_%H%M')}.xlsx",
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
         st.success("No issues detected on universal checks.")
 
@@ -411,7 +427,12 @@ with tab_issues:
             findings_df["check_type"].isin(check_filter)
         ].reset_index(drop=True)
 
-        st.markdown(f"Showing **{len(filtered)}** of {len(findings_df)} issues")
+        DISPLAY_LIMIT = 500
+        display_filtered = filtered.head(DISPLAY_LIMIT)
+        if len(filtered) > DISPLAY_LIMIT:
+            st.warning(f"Showing first {DISPLAY_LIMIT} of **{len(filtered):,}** filtered issues. Use Export Report to get the full list.")
+        else:
+            st.markdown(f"Showing **{len(filtered)}** of {len(findings_df)} issues")
 
         def color_severity(val):
             colors = {"CRITICAL": "background-color:#fef2f2;color:#dc2626;font-weight:600",
@@ -419,7 +440,7 @@ with tab_issues:
                       "INFO":     "background-color:#eff6ff;color:#2563eb;font-weight:600"}
             return colors.get(val, "")
 
-        styled = filtered.style.applymap(color_severity, subset=["severity"])
+        styled = display_filtered.style.applymap(color_severity, subset=["severity"])
         st.dataframe(styled, use_container_width=True, height=450)
 
 

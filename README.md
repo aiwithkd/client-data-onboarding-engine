@@ -1,6 +1,6 @@
 # Client Data Onboarding Quality Engine
 
-**Live App →** [client-data-onboarding-engine.streamlit.app](https://client-data-onboarding-engine.streamlit.app)
+**Live App →** [client-data-app-engine-aiwithkd.streamlit.app](https://client-data-app-engine-aiwithkd.streamlit.app)
 
 A production-inspired data quality and validation engine for client Excel files — built to catch schema issues, bad identifiers, missing fields, and business rule violations **before** they cause failures in a production load.
 

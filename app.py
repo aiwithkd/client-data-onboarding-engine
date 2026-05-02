@@ -341,7 +341,20 @@ To get full validation, your file's sheet names should match one of:
 
     st.markdown("#### Sheet Preview")
     sheet_choice_u = st.selectbox("Select sheet", list(sheets.keys()))
-    preview_df = sheets[sheet_choice_u].head(1000).astype(str).replace("nan", "")
+    raw_df = sheets[sheet_choice_u].head(1000)
+    # Sanitize: deduplicate column names, force all to string, drop all-null cols
+    raw_df.columns = [f"col_{i}" if not str(c).strip() else str(c) for i, c in enumerate(raw_df.columns)]
+    seen = {}
+    new_cols = []
+    for c in raw_df.columns:
+        if c in seen:
+            seen[c] += 1
+            new_cols.append(f"{c}_{seen[c]}")
+        else:
+            seen[c] = 0
+            new_cols.append(c)
+    raw_df.columns = new_cols
+    preview_df = raw_df.astype(str).replace("nan", "").replace("<NA>", "").replace("None", "")
     if len(sheets[sheet_choice_u]) > 1000:
         st.caption(f"Showing first 1,000 of {len(sheets[sheet_choice_u]):,} rows")
     st.dataframe(preview_df, use_container_width=True, height=400)
@@ -481,10 +494,11 @@ with tab_data:
     sheet_choice = st.selectbox("Select sheet to preview", list(sheets.keys()))
     df_preview   = sheets[sheet_choice]
     st.markdown(f"**{len(df_preview)} rows · {len(df_preview.columns)} columns**")
-    preview_safe = df_preview.head(1000).astype(str).replace("nan", "")
+    raw_preview = df_preview.head(1000)
+    raw_preview = raw_preview.astype(str).replace("nan", "").replace("<NA>", "").replace("None", "")
     if len(df_preview) > 1000:
         st.caption(f"Showing first 1,000 of {len(df_preview):,} rows")
-    st.dataframe(preview_safe, use_container_width=True, height=450)
+    st.dataframe(raw_preview, use_container_width=True, height=450)
 
 
 # ── Tab 4: Export ──────────────────────────────────────────────────────────────

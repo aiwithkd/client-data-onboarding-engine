@@ -36,6 +36,18 @@ def _clean_dataframe(df: pd.DataFrame, sheet_name: str) -> pd.DataFrame:
     # Drop columns that are entirely unnamed (Unnamed: X artifacts from Excel)
     df = df.loc[:, ~df.columns.str.startswith("unnamed")]
 
+    # Deduplicate column names (Excel files can have repeated headers)
+    seen = {}
+    new_cols = []
+    for c in df.columns:
+        if c in seen:
+            seen[c] += 1
+            new_cols.append(f"{c}_{seen[c]}")
+        else:
+            seen[c] = 0
+            new_cols.append(c)
+    df.columns = new_cols
+
     # Strip string values
     for col in df.select_dtypes(include="object").columns:
         df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)

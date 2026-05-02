@@ -12,7 +12,11 @@ import pandas as pd
 from io import BytesIO
 
 from ingest import load_excel, detect_client_type
-from quality_checks import run_all_checks, compute_readiness_score
+from quality_checks import (
+    run_all_checks, compute_readiness_score,
+    check_isin_format, check_date_columns,
+    check_negative_quantities, check_non_numeric_amounts,
+)
 from config import CLIENT_CONFIGS
 
 # ── Page config ────────────────────────────────────────────────────────────────
@@ -109,10 +113,6 @@ def run_qc(file_source, client_key_override=None):
 
     if not client_key:
         # Unknown file — run universal checks only (ISIN, dates, numerics, nulls)
-        from quality_checks import (
-            check_isin_format, check_date_columns, check_negative_quantities,
-            check_non_numeric_amounts, compute_readiness_score
-        )
         findings = []
         for sheet_name, df in sheets.items():
             findings += check_isin_format(df, sheet_name)

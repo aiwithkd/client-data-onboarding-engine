@@ -341,7 +341,10 @@ To get full validation, your file's sheet names should match one of:
 
     st.markdown("#### Sheet Preview")
     sheet_choice_u = st.selectbox("Select sheet", list(sheets.keys()))
-    st.dataframe(sheets[sheet_choice_u], use_container_width=True, height=400)
+    preview_df = sheets[sheet_choice_u].head(1000).astype(str).replace("nan", "")
+    if len(sheets[sheet_choice_u]) > 1000:
+        st.caption(f"Showing first 1,000 of {len(sheets[sheet_choice_u]):,} rows")
+    st.dataframe(preview_df, use_container_width=True, height=400)
     st.stop()
 
 config = CLIENT_CONFIGS[client_key]
@@ -478,7 +481,10 @@ with tab_data:
     sheet_choice = st.selectbox("Select sheet to preview", list(sheets.keys()))
     df_preview   = sheets[sheet_choice]
     st.markdown(f"**{len(df_preview)} rows · {len(df_preview.columns)} columns**")
-    st.dataframe(df_preview, use_container_width=True, height=450)
+    preview_safe = df_preview.head(1000).astype(str).replace("nan", "")
+    if len(df_preview) > 1000:
+        st.caption(f"Showing first 1,000 of {len(df_preview):,} rows")
+    st.dataframe(preview_safe, use_container_width=True, height=450)
 
 
 # ── Tab 4: Export ──────────────────────────────────────────────────────────────
